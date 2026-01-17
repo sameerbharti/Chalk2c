@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { UploadedFile } from '@/components/MultiFileUpload';
 import { SessionInfo, OCRResult } from './useOCR';
@@ -25,6 +25,15 @@ export const useMultiFileOCR = () => {
   const [error, setError] = useState<string | null>(null);
 
   const processAllFiles = async (uploadedFiles: UploadedFile[]): Promise<void> => {
+    if (!isSupabaseConfigured()) {
+      toast({
+        title: "Configuration Required",
+        description: "Please set up your Supabase environment variables. See the warning at the top of the page.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     setProcessedCount(0);
     setError(null);
@@ -204,11 +213,16 @@ export const useMultiFileOCR = () => {
   };
 
   const loadSessions = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('classroom_sessions')
-      .select('id, subject, chapter, session_date, status')
-      .eq('status', 'completed')
-      .order('created_at', { ascending: false });
+    if (!isSupabaseConfigured()) {
+      return; // Silently fail if not configured
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('classroom_sessions')
+        .select('id, subject, chapter, session_date, status')
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false });
 
     if (!error && data) {
       const sessionInfos: SessionInfo[] = [];
@@ -227,6 +241,11 @@ export const useMultiFileOCR = () => {
         });
       }
       setSessions(sessionInfos);
+    } else if (error) {
+      console.error('Error loading sessions:', error);
+    }
+    } catch (err) {
+      console.error('Error loading sessions:', err);
     }
   }, []);
 

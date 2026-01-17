@@ -2,34 +2,55 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
-// Validate environment variables
+// Validate environment variables (warn but don't throw to allow app to load)
 if (!SUPABASE_URL) {
   console.error('❌ VITE_SUPABASE_URL is not set. Please create a .env file with VITE_SUPABASE_URL=https://your-project.supabase.co');
-  throw new Error('Missing VITE_SUPABASE_URL environment variable. Please check your .env file.');
+  console.warn('⚠️ App will load but Supabase features will not work until environment variables are set.');
 }
 
 if (!SUPABASE_PUBLISHABLE_KEY) {
   console.error('❌ VITE_SUPABASE_PUBLISHABLE_KEY is not set. Please create a .env file with VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key');
-  throw new Error('Missing VITE_SUPABASE_PUBLISHABLE_KEY environment variable. Please check your .env file.');
+  console.warn('⚠️ App will load but Supabase features will not work until environment variables are set.');
 }
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+// Create client with fallback values to prevent crashes
+// The client will fail gracefully when used if env vars are missing
+export const supabase = SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY
+  ? createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    })
+  : createClient<Database>('https://placeholder.supabase.co', 'placeholder-key', {
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
 
 // Log connection status (only in development)
 if (import.meta.env.DEV) {
-  console.log('✅ Supabase client initialized');
-  console.log('📍 Supabase URL:', SUPABASE_URL);
-  console.log('🔑 Key configured:', SUPABASE_PUBLISHABLE_KEY ? 'Yes' : 'No');
+  if (SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY) {
+    console.log('✅ Supabase client initialized');
+    console.log('📍 Supabase URL:', SUPABASE_URL);
+    console.log('🔑 Key configured: Yes');
+  } else {
+    console.warn('⚠️ Supabase client initialized with placeholder values');
+    console.warn('📍 Supabase URL:', SUPABASE_URL || 'NOT SET');
+    console.warn('🔑 Key configured:', SUPABASE_PUBLISHABLE_KEY ? 'Yes' : 'NO');
+  }
 }
+
+// Export a helper to check if Supabase is properly configured
+export const isSupabaseConfigured = (): boolean => {
+  return !!(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
+};

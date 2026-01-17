@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Image, Calendar, BookOpen, Trash2, X, AlertTriangle } from "lucide-react";
 import { Button } from "./ui/button";
 import { SessionInfo } from "@/hooks/useOCR";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 interface SessionsSidebarProps {
@@ -31,6 +31,16 @@ export const SessionsSidebar = ({
 
   const confirmDelete = async () => {
     if (!confirmDeleteId) return;
+    
+    if (!isSupabaseConfigured()) {
+      toast({
+        title: "Configuration Required",
+        description: "Please set up your Supabase environment variables.",
+        variant: "destructive",
+      });
+      setConfirmDeleteId(null);
+      return;
+    }
     
     setDeletingId(confirmDeleteId);
     try {

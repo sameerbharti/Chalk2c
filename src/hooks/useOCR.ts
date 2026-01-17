@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export interface OCRResult {
@@ -31,6 +31,16 @@ export const useOCR = () => {
 
   // Process image and get OCR result (but don't index yet)
   const processImage = async (imageFile: File, subject?: string, chapter?: string): Promise<OCRResult | null> => {
+    if (!isSupabaseConfigured()) {
+      setError('Supabase is not configured. Please set up environment variables.');
+      toast({
+        title: "Configuration Required",
+        description: "Please set up your Supabase environment variables.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
     setIsProcessing(true);
     setError(null);
 
@@ -108,6 +118,15 @@ export const useOCR = () => {
   ): Promise<boolean> => {
     if (!pendingSessionId) return false;
 
+    if (!isSupabaseConfigured()) {
+      toast({
+        title: "Configuration Required",
+        description: "Please set up your Supabase environment variables.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     setIsProcessing(true);
     try {
       const { data, error: fnError } = await supabase.functions.invoke('index-content', {
@@ -165,6 +184,11 @@ export const useOCR = () => {
 
   // Load existing sessions
   const loadSessions = useCallback(async () => {
+    if (!isSupabaseConfigured()) {
+      return; // Silently fail if not configured
+    }
+
+    try {
     const { data, error } = await supabase
       .from('classroom_sessions')
       .select('id, subject, chapter, session_date, status')
@@ -188,6 +212,11 @@ export const useOCR = () => {
         });
       }
       setSessions(sessionInfos);
+    } else if (error) {
+      console.error('Error loading sessions:', error);
+    }
+    } catch (err) {
+      console.error('Error loading sessions:', err);
     }
   }, []);
 

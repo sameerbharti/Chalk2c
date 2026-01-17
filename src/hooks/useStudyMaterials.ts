@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export interface QuizQuestion {
@@ -46,6 +46,15 @@ export const useStudyMaterials = (sessionIds: string[]) => {
     difficulty: 'easy' | 'medium' | 'hard' = 'medium',
     count: number = 5
   ): Promise<StudyMaterial | null> => {
+    if (!isSupabaseConfigured()) {
+      toast({
+        title: "Configuration Required",
+        description: "Please set up your Supabase environment variables. See the warning at the top of the page.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
     if (sessionIds.length === 0) {
       toast({ title: "No content", description: "Please upload content first.", variant: "destructive" });
       return null;

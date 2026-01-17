@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export interface RetrievalDetail {
@@ -29,6 +29,15 @@ export const useChat = (sessionId: string | null, sessionIds: string[] = []) => 
     difficulty: 'easy' | 'medium' | 'hard' = 'medium',
     dateFilter?: string
   ): Promise<void> => {
+    if (!isSupabaseConfigured()) {
+      toast({
+        title: "Configuration Required",
+        description: "Please set up your Supabase environment variables. See the warning at the top of the page.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const activeIds = sessionIds.length > 0 ? sessionIds : (sessionId ? [sessionId] : []);
     
     if (activeIds.length === 0 || !question.trim()) {
