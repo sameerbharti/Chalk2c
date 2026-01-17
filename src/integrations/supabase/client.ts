@@ -5,6 +5,17 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Validate environment variables
+if (!SUPABASE_URL) {
+  console.error('❌ VITE_SUPABASE_URL is not set. Please create a .env file with VITE_SUPABASE_URL=https://your-project.supabase.co');
+  throw new Error('Missing VITE_SUPABASE_URL environment variable. Please check your .env file.');
+}
+
+if (!SUPABASE_PUBLISHABLE_KEY) {
+  console.error('❌ VITE_SUPABASE_PUBLISHABLE_KEY is not set. Please create a .env file with VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key');
+  throw new Error('Missing VITE_SUPABASE_PUBLISHABLE_KEY environment variable. Please check your .env file.');
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -15,3 +26,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Log connection status (only in development)
+if (import.meta.env.DEV) {
+  console.log('✅ Supabase client initialized');
+  console.log('📍 Supabase URL:', SUPABASE_URL);
+  console.log('🔑 Key configured:', SUPABASE_PUBLISHABLE_KEY ? 'Yes' : 'No');
+}

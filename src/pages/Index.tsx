@@ -7,6 +7,7 @@ import { StudyMaterials } from "@/components/StudyMaterials";
 import { Footer } from "@/components/Footer";
 import { ProgressDashboard } from "@/components/ProgressDashboard";
 import { SessionsSidebar } from "@/components/SessionsSidebar";
+import { SetupWarning } from "@/components/SetupWarning";
 import { useMultiFileOCR } from "@/hooks/useMultiFileOCR";
 
 const Index = () => {
@@ -67,6 +68,7 @@ const Index = () => {
 
   return (
     <main className="min-h-screen bg-background">
+      <SetupWarning />
       <HeroSection />
       
       <div className="container mx-auto px-6">
