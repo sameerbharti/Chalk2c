@@ -15,7 +15,6 @@ Turn blackboard photos into an intelligent AI tutor. Snap, learn, and ask questi
 - **Frontend**: React + TypeScript + Vite
 - **UI**: shadcn-ui + Tailwind CSS
 - **Backend**: Supabase Edge Functions (Deno)
-- **AI**: OpenAI GPT-4o
 - **Database**: Supabase PostgreSQL
 - **Deployment**: Vercel (Frontend) + Supabase (Backend)
 
@@ -119,4 +118,4 @@ This project is open source and available under the MIT License.
 
 ## 🙏 Acknowledgments
 
-Built with React, Supabase, OpenAI, and modern web technologies.
+Built with React, Supabase, and modern web technologies.
