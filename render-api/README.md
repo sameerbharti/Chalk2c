@@ -28,4 +28,4 @@ This directory contains the backend API for Render deployment (alternative to Su
 Set these in Render dashboard:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `LOVABLE_API_KEY`
+- `OPENAI_API_KEY`

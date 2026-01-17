@@ -106,7 +106,7 @@ Supabase Edge Functions are designed to run on Supabase infrastructure. This is 
 
 4. **Set Environment Variables**
    In Supabase Dashboard → Settings → Edge Functions → Secrets:
-   - `LOVABLE_API_KEY` = your Lovable API key
+   - `OPENAI_API_KEY` = your OpenAI API key
    - `SUPABASE_URL` = your Supabase project URL
    - `SUPABASE_SERVICE_ROLE_KEY` = your service role key
 
@@ -147,7 +147,7 @@ If you prefer Render, you can deploy the functions as a unified Deno service.
    ```
    SUPABASE_URL=https://xxxxx.supabase.co
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-   LOVABLE_API_KEY=your-lovable-api-key
+   OPENAI_API_KEY=your-openai-api-key
    ```
 
 5. **Deploy**
@@ -263,7 +263,7 @@ VITE_API_URL=https://your-render-api.onrender.com (if using Render)
 ```
 SUPABASE_URL=https://xxxxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-LOVABLE_API_KEY=your-lovable-api-key
+OPENAI_API_KEY=your-openai-api-key
 ```
 
 ---
