@@ -1,0 +1,20 @@
+# Render Configuration for Chalk2Chat Backend API
+# Note: Recommended approach is to deploy Supabase Edge Functions to Supabase
+# This is an alternative if you prefer Render
+
+services:
+  # Unified API Service (all endpoints in one service)
+  - type: web
+    name: chalk2chat-api
+    runtime: deno
+    plan: starter
+    buildCommand: echo "No build needed for Deno"
+    startCommand: deno run --allow-net --allow-env --allow-read render-api/server.ts
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: LOVABLE_API_KEY
+        sync: false
+    healthCheckPath: /health

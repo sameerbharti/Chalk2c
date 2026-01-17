@@ -1,0 +1,16 @@
+project_id = "msfunkvsvasbkrqqsbty"
+
+[functions.process-ocr]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = false
+
+[functions.index-content]
+verify_jwt = false
+
+[functions.generate-study-materials]
+verify_jwt = false
+
+[functions.delete-session]
+verify_jwt = false

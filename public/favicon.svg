@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Blackboard background -->
+  <rect x="10" y="15" width="80" height="70" rx="3" fill="#1a2f1a" stroke="#0f1f0f" stroke-width="2"/>
+  
+  <!-- Chalkboard texture lines -->
+  <line x1="15" y1="25" x2="85" y2="25" stroke="#2a4a2a" stroke-width="0.5" opacity="0.3"/>
+  <line x1="15" y1="35" x2="85" y2="35" stroke="#2a4a2a" stroke-width="0.5" opacity="0.3"/>
+  <line x1="15" y1="45" x2="85" y2="45" stroke="#2a4a2a" stroke-width="0.5" opacity="0.3"/>
+  <line x1="15" y1="55" x2="85" y2="55" stroke="#2a4a2a" stroke-width="0.5" opacity="0.3"/>
+  <line x1="15" y1="65" x2="85" y2="65" stroke="#2a4a2a" stroke-width="0.5" opacity="0.3"/>
+  <line x1="15" y1="75" x2="85" y2="75" stroke="#2a4a2a" stroke-width="0.5" opacity="0.3"/>
+  
+  <!-- Chalk writing (mathematical equation) -->
+  <text x="50" y="45" font-family="Arial, sans-serif" font-size="16" fill="#f0f0f0" text-anchor="middle" font-weight="bold">x² + y²</text>
+  <text x="50" y="65" font-family="Arial, sans-serif" font-size="12" fill="#f0f0f0" text-anchor="middle" opacity="0.8">= r²</text>
+  
+  <!-- Chalk dust particles -->
+  <circle cx="20" cy="20" r="1" fill="#f0f0f0" opacity="0.4"/>
+  <circle cx="25" cy="18" r="0.8" fill="#f0f0f0" opacity="0.3"/>
+  <circle cx="75" cy="22" r="1.2" fill="#f0f0f0" opacity="0.4"/>
+  <circle cx="80" cy="20" r="0.9" fill="#f0f0f0" opacity="0.3"/>
+  
+  <!-- Board frame/tray -->
+  <rect x="8" y="85" width="84" height="8" rx="2" fill="#8b7355"/>
+  <rect x="10" y="87" width="80" height="4" fill="#a0826d"/>
+</svg>
