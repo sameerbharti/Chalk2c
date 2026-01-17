@@ -1,73 +1,122 @@
-# Welcome to your Lovable project
+# Chalk2Chat — AI Tutor for Every Classroom
 
-## Project info
+Turn blackboard photos into an intelligent AI tutor. Snap, learn, and ask questions grounded in classroom content.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Features
 
-## How can I edit this code?
+- **Smart OCR**: Extract text from blackboard photos and PDFs using AI vision
+- **AI-Powered Chat**: Ask questions about your classroom content with context-aware responses
+- **Study Materials**: Generate summaries, quizzes, and flashcards from your content
+- **Multi-Session Support**: Upload multiple class sessions and chat across all of them
+- **Difficulty Levels**: Adjust AI responses to easy, medium, or hard difficulty
 
-There are several ways of editing your application.
+## 🛠️ Tech Stack
 
-**Use Lovable**
+- **Frontend**: React + TypeScript + Vite
+- **UI**: shadcn-ui + Tailwind CSS
+- **Backend**: Supabase Edge Functions (Deno)
+- **AI**: OpenAI GPT-4o
+- **Database**: Supabase PostgreSQL
+- **Deployment**: Vercel (Frontend) + Supabase (Backend)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 📋 Prerequisites
 
-Changes made via Lovable will be committed automatically to this repo.
+- Node.js 18+ and npm
+- Supabase account
+- OpenAI API key
 
-**Use your preferred IDE**
+## 🏃 Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 1. Clone the Repository
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+git clone https://github.com/sameerbharti/Chalk2c.git
+cd Chalk2c
+```
 
-Follow these steps:
+### 2. Install Dependencies
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 3. Set Up Environment Variables
 
-# Step 3: Install the necessary dependencies.
-npm i
+Create a `.env` file in the root directory:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+```
+
+Get these values from your Supabase project dashboard:
+- Go to Settings → API
+- Copy the Project URL and anon/public key
+
+### 4. Start Development Server
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📚 Documentation
 
-**Use GitHub Codespaces**
+- [Deployment Guide](./DEPLOYMENT.md) - Deploy frontend and backend
+- [Supabase Deployment](./SUPABASE_DEPLOYMENT.md) - Detailed backend setup
+- [Frontend-Backend Connection](./FRONTEND_BACKEND_CONNECTION.md) - Connection setup
+- [Deployment Checklist](./DEPLOYMENT_CHECKLIST.md) - Step-by-step checklist
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🚢 Deployment
 
-## What technologies are used for this project?
+### Frontend (Vercel)
 
-This project is built with:
+1. Push your code to GitHub
+2. Import project in Vercel
+3. Add environment variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+4. Deploy!
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 
-## How can I deploy this project?
+### Backend (Supabase)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+1. Install Supabase CLI: `npm install -g supabase`
+2. Login: `npx supabase login`
+3. Link project: `npx supabase link --project-ref your-project-ref`
+4. Deploy functions: `npx supabase functions deploy`
+5. Set secrets in Supabase Dashboard
 
-## Can I connect a custom domain to my Lovable project?
+See [SUPABASE_DEPLOYMENT.md](./SUPABASE_DEPLOYMENT.md) for detailed instructions.
 
-Yes, you can!
+## 📖 Project Structure
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```
+├── src/
+│   ├── components/     # React components
+│   ├── hooks/          # Custom React hooks
+│   ├── integrations/    # Supabase client setup
+│   ├── pages/          # Page components
+│   └── lib/            # Utility functions
+├── supabase/
+│   ├── functions/      # Edge Functions (backend)
+│   └── migrations/     # Database migrations
+└── public/             # Static assets
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## 📝 License
+
+This project is open source and available under the MIT License.
+
+## 🙏 Acknowledgments
+
+Built with React, Supabase, OpenAI, and modern web technologies.
