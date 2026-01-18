@@ -37,9 +37,9 @@ serve(async (req) => {
 
     console.log(`Generating ${type} for sessions:`, sessionIds);
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured');
+    const HUGGINGFACE_API_KEY = Deno.env.get('HUGGINGFACE_API_KEY');
+    if (!HUGGINGFACE_API_KEY) {
+      throw new Error('HUGGINGFACE_API_KEY is not configured. Get a free API key at https://huggingface.co/settings/tokens');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -269,37 +269,47 @@ Generate ${count} flashcards that build understanding progressively. Use proper 
     };
 
     const promptConfig = prompts[type];
-    interface RequestBody {
-      model: string;
-      messages: Array<{ role: string; content: string }>;
-      max_tokens: number;
-      temperature: number;
-      tools?: ToolConfig[];
-      tool_choice?: ToolChoice;
-    }
-    const requestBody: RequestBody = {
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: promptConfig.system },
-        { role: "user", content: `Generate the ${type} now.` }
-      ],
-      max_tokens: 4096,
-      temperature: 0.7,
-    };
+    // Build prompt for Gemma
+    const fullPrompt = `${promptConfig.system}\n\n${promptConfig.user}\n\nGenerate the ${type} now:`;
 
-    if (promptConfig.tools) {
-      requestBody.tools = promptConfig.tools;
-      requestBody.tool_choice = promptConfig.toolChoice;
-    }
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    let response = await fetch("https://api-inference.huggingface.co/models/google/gemma-7b-it", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        inputs: fullPrompt,
+        parameters: {
+          max_new_tokens: 4096,
+          temperature: 0.7,
+          return_full_text: false,
+        },
+      }),
     });
+
+    // Handle model loading (503 status)
+    if (response.status === 503) {
+      // Model is loading, wait and retry
+      const retryAfter = response.headers.get('retry-after') || '30';
+      await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
+      
+      response = await fetch("https://api-inference.huggingface.co/models/google/gemma-7b-it", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: fullPrompt,
+          parameters: {
+            max_new_tokens: 4096,
+            temperature: 0.7,
+            return_full_text: false,
+          },
+        }),
+      });
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -307,18 +317,39 @@ Generate ${count} flashcards that build understanding progressively. Use proper 
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (response.status === 401) {
+        return new Response(JSON.stringify({ error: "Invalid API key. Please check your HUGGINGFACE_API_KEY." }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 503) {
+        return new Response(JSON.stringify({ error: "Model is loading. Please wait 30-60 seconds and try again." }), {
+          status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await response.text();
-      console.error("AI gateway error:", errText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error("AI gateway error:", response.status, errText);
+      throw new Error(`AI gateway error: ${response.status} - ${errText}`);
     }
 
     const aiResult = await response.json();
-    console.log("AI result:", JSON.stringify(aiResult).substring(0, 500));
+    
+    // Handle Hugging Face response format
+    let generatedText = "";
+    if (Array.isArray(aiResult)) {
+      generatedText = aiResult[0]?.generated_text || aiResult[0]?.text || "";
+    } else if (aiResult.error) {
+      // Hugging Face error response
+      throw new Error(aiResult.error || 'Model error occurred');
+    } else {
+      generatedText = aiResult.generated_text || aiResult.text || "";
+    }
+    
+    if (!generatedText) {
+      throw new Error('No text generated from model');
+    }
+    
+    console.log("AI result:", generatedText.substring(0, 500));
 
     interface SummaryResult {
       type: 'summary';
@@ -349,30 +380,41 @@ Generate ${count} flashcards that build understanding progressively. Use proper 
     
     let result: SummaryResult | QuizResult | FlashcardsResult;
 
+    // Parse the generated text - try to extract JSON if present
+    let parsedContent: any;
+    try {
+      // Try to find JSON in the response
+      const jsonMatch = generatedText.match(/```json\n?([\s\S]*?)\n?```/) || generatedText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedContent = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+      } else {
+        // If no JSON, use the text directly
+        parsedContent = { content: generatedText };
+      }
+    } catch (e) {
+      console.error("Failed to parse JSON, using raw text:", e);
+      parsedContent = { content: generatedText };
+    }
+
     if (type === 'summary') {
       result = {
         type: 'summary',
-        content: aiResult.choices?.[0]?.message?.content || 'Failed to generate summary',
+        content: parsedContent.content || generatedText || 'Failed to generate summary',
         metadata: { subjects, chapters, difficulty }
       };
-    } else {
-      // Extract from tool call
-      const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall?.function?.arguments) {
-        try {
-          const parsed = JSON.parse(toolCall.function.arguments);
-          result = {
-            type,
-            ...parsed,
-            metadata: { subjects, chapters, difficulty, count }
-          };
-        } catch (e) {
-          console.error("Failed to parse tool response:", e);
-          throw new Error("Failed to parse generated content");
-        }
-      } else {
-        throw new Error("No structured response received");
-      }
+    } else if (type === 'quiz') {
+      // Extract quiz questions from parsed content
+      result = {
+        type: 'quiz',
+        questions: parsedContent.questions || parsedContent.quiz || [],
+        metadata: { subjects, chapters, difficulty, count }
+      };
+    } else { // flashcards
+      result = {
+        type: 'flashcards',
+        flashcards: parsedContent.flashcards || parsedContent.cards || [],
+        metadata: { subjects, chapters, difficulty, count }
+      };
     }
 
     return new Response(JSON.stringify(result), {

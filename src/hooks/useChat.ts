@@ -64,7 +64,12 @@ export const useChat = (sessionId: string | null, sessionIds: string[] = []) => 
       });
 
       if (fnError) throw new Error(fnError.message);
-      if (data.error) throw new Error(data.error);
+      if (data?.error) throw new Error(data.error);
+
+      // Validate response has answer
+      if (!data?.answer) {
+        throw new Error('No answer received from AI. The model may still be loading. Please try again in a moment.');
+      }
 
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,

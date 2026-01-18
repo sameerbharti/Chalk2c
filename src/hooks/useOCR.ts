@@ -116,7 +116,14 @@ export const useOCR = () => {
     subject: string, 
     chapter: string
   ): Promise<boolean> => {
-    if (!pendingSessionId) return false;
+    if (!pendingSessionId) {
+      toast({
+        title: "No Session",
+        description: "Please process an image first.",
+        variant: "destructive",
+      });
+      return false;
+    }
 
     if (!isSupabaseConfigured()) {
       toast({
@@ -127,50 +134,93 @@ export const useOCR = () => {
       return false;
     }
 
+    // Validate text is not empty
+    if (!editedText || editedText.trim().length === 0) {
+      toast({
+        title: "Empty Text",
+        description: "Please provide text to index. Text cannot be empty.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     setIsProcessing(true);
     try {
       const { data, error: fnError } = await supabase.functions.invoke('index-content', {
         body: {
           sessionId: pendingSessionId,
-          text: editedText,
-          subject,
-          chapter
+          text: editedText.trim(),
+          subject: subject || 'General',
+          chapter: chapter || 'Lesson'
         }
       });
 
-      if (fnError) throw new Error(fnError.message);
-      if (data.error) throw new Error(data.error);
+      if (fnError) {
+        const errorMsg = fnError.message || 'Unknown error';
+        console.error('Index function error:', fnError);
+        toast({ 
+          title: "Indexing Error", 
+          description: `Function error: ${errorMsg}. Check browser console for details.`, 
+          variant: "destructive" 
+        });
+        return false;
+      }
+      
+      if (data?.error) {
+        console.error('Index function returned error:', data.error);
+        toast({ 
+          title: "Indexing Error", 
+          description: data.error, 
+          variant: "destructive" 
+        });
+        return false;
+      }
+
+      if (!data?.success) {
+        console.error('Index function returned unsuccessful response:', data);
+        toast({ 
+          title: "Indexing Error", 
+          description: "Indexing failed - no success response. Check browser console for details.", 
+          variant: "destructive" 
+        });
+        return false;
+      }
 
       // Update OCR result with final data
       setOcrResult(prev => prev ? {
         ...prev,
-        extractedText: editedText,
-        subject,
-        chapter,
-        chunksCreated: data.chunksCreated
+        extractedText: editedText.trim(),
+        subject: subject || 'General',
+        chapter: chapter || 'Lesson',
+        chunksCreated: data.chunksCreated || 0
       } : null);
 
       // Add to sessions list
       setSessions(prev => [...prev, {
         id: pendingSessionId,
-        subject,
-        chapter,
+        subject: subject || 'General',
+        chapter: chapter || 'Lesson',
         date: new Date().toISOString().split('T')[0],
-        chunksCount: data.chunksCreated
+        chunksCount: data.chunksCreated || 0
       }]);
 
       setPendingText(null);
 
       toast({
         title: "Content Indexed!",
-        description: `Created ${data.chunksCreated} knowledge chunks.`,
+        description: `Created ${data.chunksCreated || 0} knowledge chunks.`,
       });
 
       return true;
 
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Indexing failed';
-      toast({ title: "Indexing Error", description: message, variant: "destructive" });
+      console.error('Indexing exception:', err);
+      toast({ 
+        title: "Indexing Error", 
+        description: `${message}. Check browser console for details.`, 
+        variant: "destructive" 
+      });
       return false;
     } finally {
       setIsProcessing(false);

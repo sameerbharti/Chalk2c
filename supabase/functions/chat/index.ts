@@ -48,9 +48,9 @@ serve(async (req) => {
 
     console.log("Chat request for sessions:", activeSessionIds, "Question:", question.substring(0, 100), "Difficulty:", difficulty);
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured');
+    const HUGGINGFACE_API_KEY = Deno.env.get('HUGGINGFACE_API_KEY');
+    if (!HUGGINGFACE_API_KEY) {
+      throw new Error('HUGGINGFACE_API_KEY is not configured. Get a free API key at https://huggingface.co/settings/tokens');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -107,23 +107,53 @@ serve(async (req) => {
     // Build the RAG prompt with difficulty adaptation and question context
     const systemPrompt = buildRAGPrompt(retrievedContent, sessions?.[0], difficulty, question);
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Use Gemma via Hugging Face Inference API
+    // Build the prompt from messages
+    const conversationText = [
+      systemPrompt,
+      ...messages.slice(-6).map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`),
+      `User: ${question}`,
+      "Assistant:"
+    ].join('\n\n');
+
+    let response = await fetch("https://api-inference.huggingface.co/models/google/gemma-7b-it", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages.slice(-6),
-          { role: "user", content: question }
-        ],
-        max_tokens: 2048, // Increased for detailed explanations
-        temperature: 0.4, // Slightly higher for more natural explanations
+        inputs: conversationText,
+        parameters: {
+          max_new_tokens: 2048,
+          temperature: 0.4,
+          return_full_text: false,
+        },
       }),
     });
+
+    // Handle model loading (503 status)
+    if (response.status === 503) {
+      // Model is loading, wait and retry
+      const retryAfter = response.headers.get('retry-after') || '30';
+      await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
+      
+      response = await fetch("https://api-inference.huggingface.co/models/google/gemma-7b-it", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: conversationText,
+          parameters: {
+            max_new_tokens: 2048,
+            temperature: 0.4,
+            return_full_text: false,
+          },
+        }),
+      });
+    }
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -131,16 +161,38 @@ serve(async (req) => {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (response.status === 401) {
+        return new Response(JSON.stringify({ error: "Invalid API key. Please check your HUGGINGFACE_API_KEY." }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI gateway error: ${response.status}`);
+      if (response.status === 503) {
+        return new Response(JSON.stringify({ error: "Model is loading. Please wait 30-60 seconds and try again." }), {
+          status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const errorText = await response.text();
+      console.error("Hugging Face API error:", response.status, errorText);
+      throw new Error(`AI gateway error: ${response.status} - ${errorText}`);
     }
 
     const aiResult = await response.json();
-    const answer = aiResult.choices?.[0]?.message?.content || "I couldn't generate a response.";
+    
+    // Handle Hugging Face response format
+    let answer = "I couldn't generate a response.";
+    if (Array.isArray(aiResult)) {
+      answer = aiResult[0]?.generated_text || aiResult[0]?.text || answer;
+    } else if (aiResult.error) {
+      // Hugging Face error response
+      throw new Error(aiResult.error || 'Model error occurred');
+    } else {
+      answer = aiResult.generated_text || aiResult.text || answer;
+    }
+    
+    // Clean up the answer (remove prompt if included)
+    if (answer.includes('Assistant:')) {
+      answer = answer.split('Assistant:').pop()?.trim() || answer;
+    }
     
     // Only mark as refusal if truly refusing (not for general knowledge answers)
     const isRefusal = answer.toLowerCase().includes("not been covered") && 

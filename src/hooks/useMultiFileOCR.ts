@@ -166,35 +166,68 @@ export const useMultiFileOCR = () => {
   const confirmAndIndexAll = async (
     edits: Map<string, { text: string; subject: string; chapter: string }>
   ): Promise<boolean> => {
+    if (!isSupabaseConfigured()) {
+      toast({
+        title: "Configuration Required",
+        description: "Please set up your Supabase environment variables.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     setIsProcessing(true);
     let successCount = 0;
+    const errors: string[] = [];
 
     for (const [fileId, pending] of pendingResults) {
       const edited = edits.get(fileId) || pending;
+      
+      // Validate text is not empty
+      if (!edited.text || edited.text.trim().length === 0) {
+        errors.push(`File ${fileId}: Text is empty`);
+        continue;
+      }
       
       try {
         const { data, error: fnError } = await supabase.functions.invoke('index-content', {
           body: {
             sessionId: pending.sessionId,
-            text: edited.text,
-            subject: edited.subject,
-            chapter: edited.chapter
+            text: edited.text.trim(),
+            subject: edited.subject || 'General',
+            chapter: edited.chapter || 'Lesson'
           }
         });
 
-        if (fnError) throw new Error(fnError.message);
-        if (data.error) throw new Error(data.error);
+        if (fnError) {
+          const errorMsg = fnError.message || 'Unknown error';
+          errors.push(`File ${fileId}: ${errorMsg}`);
+          console.error(`Failed to index file ${fileId}:`, fnError);
+          continue;
+        }
+        
+        if (data?.error) {
+          errors.push(`File ${fileId}: ${data.error}`);
+          console.error(`Failed to index file ${fileId}:`, data.error);
+          continue;
+        }
+
+        if (!data?.success) {
+          errors.push(`File ${fileId}: Indexing failed - no success response`);
+          continue;
+        }
 
         setSessions(prev => [...prev, {
           id: pending.sessionId,
-          subject: edited.subject,
-          chapter: edited.chapter,
+          subject: edited.subject || 'General',
+          chapter: edited.chapter || 'Lesson',
           date: new Date().toISOString().split('T')[0],
-          chunksCount: data.chunksCreated
+          chunksCount: data.chunksCreated || 0
         }]);
 
         successCount++;
       } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        errors.push(`File ${fileId}: ${errorMsg}`);
         console.error(`Failed to index file ${fileId}:`, err);
       }
     }
@@ -203,13 +236,32 @@ export const useMultiFileOCR = () => {
     setIsProcessing(false);
 
     if (successCount > 0) {
-      toast({
-        title: "Content Indexed!",
-        description: `Successfully indexed ${successCount} files.`,
-      });
+      if (errors.length > 0) {
+        toast({
+          title: "Partially Indexed",
+          description: `Successfully indexed ${successCount} of ${pendingResults.size} files. Some errors occurred.`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Content Indexed!",
+          description: `Successfully indexed ${successCount} file${successCount !== 1 ? 's' : ''}.`,
+        });
+      }
       return true;
+    } else {
+      // All failed
+      const errorMessage = errors.length > 0 
+        ? errors.slice(0, 3).join('; ') + (errors.length > 3 ? ` and ${errors.length - 3} more...` : '')
+        : 'Indexing failed. Please check browser console for details.';
+      
+      toast({
+        title: "Indexing Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
     }
-    return false;
   };
 
   const loadSessions = useCallback(async () => {
